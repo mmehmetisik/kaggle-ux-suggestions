@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kaggle — Task Detail & Model Selection</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; background: #f5f5f5; color: #202124; font-size: 14px; }
+
+  /* ===== TOP BAR ===== */
+  .topbar { height: 50px; background: #fff; border-bottom: 1px solid #e0e0e0; display: flex; align-items: center; padding: 0 12px; position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+  .hamburger { background: none; border: none; cursor: pointer; padding: 8px; margin-right: 4px; display: flex; }
+  .hamburger svg { width: 20px; height: 20px; fill: #5f6368; }
+  .logo-text { font-size: 20px; font-weight: 700; color: #20beff; letter-spacing: -0.3px; margin-right: 24px; }
+  .search-bar { flex: 1; max-width: 600px; height: 34px; background: #f1f3f4; border: 1px solid #e0e0e0; border-radius: 8px; padding: 0 12px; display: flex; align-items: center; gap: 8px; }
+  .search-bar svg { width: 18px; height: 18px; fill: #9aa0a6; }
+  .search-bar input { border: none; background: none; outline: none; font-size: 13px; color: #5f6368; flex: 1; }
+  .toggle-wrap { margin-left: auto; display: flex; align-items: center; gap: 10px; margin-right: 12px; }
+  .toggle-label-text { font-size: 11px; color: #5f6368; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+  .toggle-switch { width: 160px; height: 30px; background: #f1f3f4; border-radius: 15px; border: 1px solid #dadce0; display: flex; align-items: center; position: relative; cursor: pointer; overflow: hidden; }
+  .toggle-option { flex: 1; text-align: center; font-size: 12px; font-weight: 500; color: #5f6368; position: relative; z-index: 2; transition: color 0.3s; user-select: none; }
+  .toggle-option.active { color: #fff; }
+  .toggle-slider { position: absolute; top: 2px; width: 77px; height: 26px; background: #1a73e8; border-radius: 13px; transition: left 0.3s ease; z-index: 1; }
+  .toggle-slider.before { left: 2px; }
+  .toggle-slider.after { left: 81px; }
+  .mode-hint { font-size: 11px; color: #34a853; font-weight: 500; display: none; }
+  .mode-hint.visible { display: inline; }
+  .topbar-right { display: flex; align-items: center; gap: 8px; }
+  .btn { padding: 7px 16px; border-radius: 4px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; display: flex; align-items: center; gap: 6px; }
+  .btn-outline { background: #fff; border: 1px solid #dadce0; color: #3c4043; }
+  .btn-edit { background: #202124; color: #fff; }
+
+  /* ===== LEFT SIDEBAR ===== */
+  .sidebar { position: fixed; top: 50px; left: 0; bottom: 0; width: 150px; background: #fff; border-right: 1px solid #e0e0e0; padding-top: 12px; overflow-y: auto; }
+  .sb-item { display: flex; align-items: center; gap: 10px; padding: 8px 16px; font-size: 13px; color: #5f6368; cursor: pointer; border-radius: 0 20px 20px 0; margin-right: 8px; }
+  .sb-item:hover { background: #f1f3f4; }
+  .sb-item.active { background: #e8f0fe; color: #1a73e8; font-weight: 500; }
+  .sb-item svg { width: 20px; height: 20px; fill: currentColor; }
+  .sb-create { display: flex; align-items: center; gap: 8px; padding: 8px 16px; margin-bottom: 8px; cursor: pointer; font-size: 13px; color: #3c4043; }
+  .sb-create-btn { width: 28px; height: 28px; background: #fff; border: 1px solid #dadce0; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .sb-create-btn svg { width: 18px; height: 18px; fill: #5f6368; }
+  .sb-section { font-size: 11px; color: #5f6368; padding: 16px 16px 4px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.3px; }
+  .sb-sub { display: flex; align-items: center; gap: 8px; padding: 5px 16px 5px 24px; font-size: 12px; color: #5f6368; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sb-sub:hover { background: #f1f3f4; }
+  .sb-sub svg { width: 16px; height: 16px; fill: #9aa0a6; flex-shrink: 0; }
+
+  /* ===== MAIN CONTENT ===== */
+  .main { margin-top: 50px; margin-left: 150px; padding: 24px 32px 80px; max-width: 960px; }
+
+  /* USER ROW */
+  .user-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+  .avatar { width: 32px; height: 32px; background: #f9ab00; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #fff; }
+  .username { font-size: 13px; color: #5f6368; }
+  .vote-edit { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .vote-btn { display: flex; align-items: center; gap: 4px; padding: 6px 10px; border: 1px solid #dadce0; border-radius: 4px; background: #fff; cursor: pointer; font-size: 13px; color: #5f6368; }
+  .vote-btn svg { width: 16px; height: 16px; fill: #5f6368; }
+
+  /* TITLE */
+  .task-title { font-size: 26px; font-weight: 700; color: #202124; margin-bottom: 8px; line-height: 1.3; }
+  .task-desc { font-size: 14px; color: #5f6368; margin-bottom: 16px; line-height: 1.5; }
+
+  /* TABS */
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid #e0e0e0; margin-bottom: 16px; }
+  .tab { padding: 10px 20px; font-size: 14px; color: #5f6368; cursor: pointer; border-bottom: 2px solid transparent; }
+  .tab.active { color: #202124; font-weight: 500; border-bottom-color: #202124; }
+  .tab:hover { background: #f8f9fa; }
+
+  /* PRIVATE NOTICE */
+  .private-notice { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 20px; font-size: 13px; color: #5f6368; }
+  .private-notice svg { width: 20px; height: 20px; fill: #5f6368; }
+  .private-notice a { color: #1a73e8; cursor: pointer; text-decoration: none; margin-left: auto; font-weight: 500; }
+
+  /* DESCRIPTION */
+  .section-title { font-size: 16px; font-weight: 600; color: #202124; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .edit-icon { cursor: pointer; }
+  .edit-icon svg { width: 18px; height: 18px; fill: #9aa0a6; }
+  .desc-text { font-size: 13px; color: #9aa0a6; margin-bottom: 20px; }
+
+  /* RESULTS TABLE */
+  .results-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .results-title { font-size: 16px; font-weight: 600; color: #202124; }
+  .compare-btn { padding: 6px 14px; border: 1px solid #dadce0; border-radius: 4px; background: #fff; font-size: 12px; color: #3c4043; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+  .results-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+  .results-table th { text-align: left; padding: 10px 12px; font-size: 12px; color: #5f6368; font-weight: 500; border-bottom: 1px solid #e0e0e0; }
+  .results-table td { padding: 12px; font-size: 13px; color: #202124; border-bottom: 1px solid #f1f3f4; }
+  .results-table tr:hover { background: #f8f9fa; }
+  .model-cell { display: flex; align-items: center; gap: 8px; }
+  .model-icon { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; }
+  .icon-google { background: #4285f4; }
+  .icon-anthropic { background: #d97706; }
+  .icon-deepseek { background: #6366f1; }
+  .icon-qwen { background: #7c3aed; }
+  .score-good { color: #34a853; font-weight: 600; }
+  .score-error { color: #ea4335; font-weight: 500; display: flex; align-items: center; gap: 4px; }
+  .score-error svg { width: 14px; height: 14px; fill: #ea4335; }
+  .score-running { color: #1a73e8; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+  .spinner { width: 14px; height: 14px; border: 2px solid #e0e0e0; border-top-color: #1a73e8; border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .cost-cell { font-size: 12px; color: #5f6368; }
+  .cost-cell.expensive { color: #ea4335; font-weight: 500; }
+  .time-cell { font-size: 12px; color: #5f6368; }
+  .more-btn { background: none; border: none; cursor: pointer; font-size: 18px; color: #9aa0a6; padding: 4px; }
+  .col-new { display: none; }
+  .col-new.show { display: table-cell; }
+  .th-new { display: none; }
+  .th-new.show { display: table-cell; }
+  .new-tag { font-size: 9px; background: #1a73e8; color: #fff; padding: 1px 5px; border-radius: 3px; font-weight: 700; margin-left: 4px; display: none; }
+  .new-tag.show { display: inline; }
+
+  /* ADD MODELS */
+  .add-models-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .add-models-btn { padding: 6px 14px; border: 1px solid #dadce0; border-radius: 4px; background: #fff; font-size: 13px; color: #3c4043; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  .add-models-btn:hover { background: #f8f9fa; }
+  .pagination { font-size: 12px; color: #5f6368; display: flex; align-items: center; gap: 8px; }
+  .pagination button { background: none; border: none; cursor: pointer; font-size: 16px; color: #9aa0a6; }
+
+  /* QUOTA */
+  .quota-row { font-size: 12px; color: #5f6368; margin-bottom: 2px; }
+  .quota-warn { color: #e37400; }
+  .quota-reset { font-size: 11px; color: #1a73e8; font-weight: 500; display: none; margin-left: 8px; }
+  .quota-reset.show { display: inline; }
+  .dataset-version { font-size: 12px; color: #5f6368; margin-top: 8px; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; border: 1px solid #e0e0e0; display: none; }
+  .dataset-version.show { display: block; }
+
+  /* RIGHT INFO */
+  .right-info { position: fixed; top: 50px; right: 0; width: 220px; padding: 24px 16px; font-size: 13px; }
+  .ri-label { font-size: 12px; font-weight: 600; color: #202124; margin-bottom: 4px; }
+  .ri-value { font-size: 13px; color: #5f6368; margin-bottom: 12px; }
+
+  /* ===== MODEL SELECTION PANEL (overlay) ===== */
+  .overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3); z-index: 200; }
+  .overlay.show { display: block; }
+  .model-panel { position: fixed; top: 0; right: -420px; width: 420px; height: 100%; background: #fff; z-index: 201; transition: right 0.3s; box-shadow: -4px 0 20px rgba(0,0,0,0.15); overflow-y: auto; }
+  .model-panel.show { right: 0; }
+  .mp-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #e0e0e0; }
+  .mp-title { font-size: 16px; font-weight: 600; color: #202124; }
+  .mp-close { background: none; border: none; cursor: pointer; font-size: 20px; color: #5f6368; }
+  .mp-search { margin: 12px 20px; padding: 8px 12px; border: 1px solid #dadce0; border-radius: 8px; width: calc(100% - 40px); font-size: 13px; }
+  .mp-jump { display: flex; gap: 8px; padding: 0 20px 12px; }
+  .mp-jump-btn { width: 32px; height: 32px; border-radius: 50%; border: 1px solid #dadce0; background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #5f6368; }
+  .mp-jump-btn:hover { background: #f1f3f4; }
+
+  /* PROVIDER SECTIONS */
+  .mp-provider { padding: 8px 20px; display: flex; align-items: center; justify-content: space-between; background: #f8f9fa; border-top: 1px solid #e0e0e0; border-bottom: 1px solid #e0e0e0; }
+  .mp-provider-name { font-size: 13px; font-weight: 600; color: #202124; display: flex; align-items: center; gap: 6px; }
+  .mp-provider-tag { font-size: 10px; color: #5f6368; background: #e0e0e0; padding: 2px 6px; border-radius: 3px; font-weight: 500; }
+  .mp-select-all { font-size: 12px; color: #1a73e8; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+  .mp-model-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .mp-model { padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f1f3f4; cursor: pointer; }
+  .mp-model:hover { background: #f8f9fa; }
+  .mp-model-name { font-size: 13px; color: #202124; }
+  .mp-model-date { font-size: 11px; color: #9aa0a6; }
+  .mp-model-check { width: 18px; height: 18px; border: 2px solid #dadce0; border-radius: 3px; display: flex; align-items: center; justify-content: center; }
+  .mp-model-check.checked { background: #1a73e8; border-color: #1a73e8; }
+  .mp-model-check.checked::after { content: '✓'; color: #fff; font-size: 12px; }
+  .mp-model.greyed { opacity: 0.5; }
+
+  /* CONCURRENT WARNING */
+  .concurrent-warn { margin: 12px 20px; padding: 10px 14px; border-radius: 8px; background: #fef7e0; border: 1px solid #fdd835; font-size: 12px; color: #5f6368; display: none; align-items: center; gap: 8px; }
+  .concurrent-warn.visible { display: flex; }
+  .concurrent-warn svg { width: 18px; height: 18px; fill: #f9ab00; flex-shrink: 0; }
+  .concurrent-warn b { color: #e37400; }
+
+  /* BOTTOM BAR */
+  .mp-footer { position: sticky; bottom: 0; padding: 12px 20px; background: #fff; border-top: 1px solid #e0e0e0; display: flex; align-items: center; justify-content: space-between; }
+  .mp-selected { font-size: 12px; color: #5f6368; }
+  .mp-footer-btns { display: flex; gap: 8px; }
+  .mp-cancel { padding: 8px 20px; border: none; background: none; color: #5f6368; font-size: 13px; cursor: pointer; }
+  .mp-evaluate { padding: 8px 20px; background: #1a73e8; color: #fff; border: none; border-radius: 4px; font-size: 13px; font-weight: 500; cursor: pointer; }
+  .mp-evaluate:hover { background: #1557b0; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <button class="hamburger"><svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg></button>
+  <span class="logo-text">kaggle</span>
+  <div class="search-bar"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><input placeholder="Search" /></div>
+  <div class="toggle-wrap">
+    <span class="toggle-label-text">View:</span>
+    <div class="toggle-switch" onclick="toggleMode()">
+      <div class="toggle-slider before" id="slider"></div>
+      <div class="toggle-option active" id="optB">Before</div>
+      <div class="toggle-option" id="optA">After</div>
+    </div>
+    <span class="mode-hint" id="modeHint">✨ Suggestions active</span>
+  </div>
+  <div class="topbar-right">
+    <div class="vote-btn"><svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg> 0</div>
+    <button class="btn btn-edit"><svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg> Edit</button>
+  </div>
+</div>
+
+<!-- LEFT SIDEBAR -->
+<div class="sidebar">
+  <div class="sb-create"><div class="sb-create-btn"><svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></div> Create</div>
+  <div class="sb-item"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg> Home</div>
+  <div class="sb-item"><svg viewBox="0 0 24 24"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2z"/></svg> Competitions</div>
+  <div class="sb-item"><svg viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg> Datasets</div>
+  <div class="sb-item"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg> Models</div>
+  <div class="sb-item active"><svg viewBox="0 0 24 24"><path d="M9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4zm2 2H5V5h14v14zm0-16H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg> Benchmarks</div>
+  <div class="sb-item"><svg viewBox="0 0 24 24"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg> Code</div>
+  <div class="sb-item"><svg viewBox="0 0 24 24"><path d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1z"/></svg> Discussions</div>
+  <div class="sb-item"><svg viewBox="0 0 24 24"><path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/></svg> Learn</div>
+  <div class="sb-section">VIEWED</div>
+  <div class="sb-sub"><svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6z"/></svg> WWTP LLM Defense...</div>
+  <div class="sb-sub"><svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6z"/></svg> WWTP LLM Defense:...</div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+  <div class="user-row">
+    <div class="avatar">M</div>
+    <span class="username">MEHMET ISIK</span>
+  </div>
+
+  <h1 class="task-title">WWTP LLM Defense: Can AI Protect Critical Infrastructure?</h1>
+  <p class="task-desc">36-hour SCADA cyber attack simulation on a real WWTP. 5 attack scenarios, 3 defense modes, 2 awareness levels. Stuxnet-inspired sensor manipulation with real plant data.</p>
+
+  <div class="tabs">
+    <div class="tab active">Task Detail</div>
+    <div class="tab">Discussion</div>
+    <div class="tab">Settings</div>
+  </div>
+
+  <div class="private-notice">
+    <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+    This task is <b>Private</b>. To make it visible on a <b>public benchmark</b>, set visibility to <b>Public</b> in Settings.
+    <a>Edit visibility</a>
+  </div>
+
+  <div class="section-title">Description <span class="edit-icon"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span></div>
+  <p class="desc-text">This task does not have a description yet.</p>
+
+  <!-- RESULTS TABLE -->
+  <div class="results-header">
+    <span class="results-title">Results (7)</span>
+    <button class="compare-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="#5f6368"><path d="M9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg> Compare Outputs</button>
+  </div>
+
+  <table class="results-table">
+    <thead>
+      <tr>
+        <th>Model</th>
+        <th>↓ Latest Result</th>
+        <th class="th-new" id="thCost">Cost <span class="new-tag" id="costTag">NEW</span></th>
+        <th class="th-new" id="thTime">Time <span class="new-tag" id="timeTag">NEW</span></th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><div class="model-cell"><div class="model-icon icon-google">G</div> Gemini 2.5 Flash</div></td>
+        <td><span class="score-good">89.80</span></td>
+        <td class="col-new cost-cell" id="c1">$0.12</td>
+        <td class="col-new time-cell" id="t1">5m 12s</td>
+        <td><button class="more-btn">⋯</button></td>
+      </tr>
+      <tr>
+        <td><div class="model-cell"><div class="model-icon icon-google">G</div> Gemini 2.0 Flash Lite</div></td>
+        <td><span class="score-good">85.10</span></td>
+        <td class="col-new cost-cell" id="c2">$0.08</td>
+        <td class="col-new time-cell" id="t2">3m 44s</td>
+        <td><button class="more-btn">⋯</button></td>
+      </tr>
+      <tr>
+        <td><div class="model-cell"><div class="model-icon icon-google">G</div> Gemini 2.0 Flash</div></td>
+        <td><span class="score-good">78.20</span></td>
+        <td class="col-new cost-cell" id="c3">$0.10</td>
+        <td class="col-new time-cell" id="t3">4m 30s</td>
+        <td><button class="more-btn">⋯</button></td>
+      </tr>
+      <tr>
+        <td><div class="model-cell"><div class="model-icon icon-anthropic">A</div> Claude Opus 4.1</div></td>
+        <td><span class="score-running"><span class="spinner"></span> running...</span></td>
+        <td class="col-new cost-cell" id="c4" style="color: #1a73e8;">$2.40 so far</td>
+        <td class="col-new time-cell" id="t4" style="color: #1a73e8;">18m ...</td>
+        <td><button class="more-btn">⋯</button></td>
+      </tr>
+      <tr>
+        <td><div class="model-cell"><div class="model-icon icon-google">G</div> Gemini 3 Flash Preview</div></td>
+        <td><span class="score-error"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg> ERROR</span></td>
+        <td class="col-new cost-cell" id="c5">$0.31</td>
+        <td class="col-new time-cell" id="t5">7m 02s</td>
+        <td><button class="more-btn">⋯</button></td>
+      </tr>
+      <tr>
+        <td><div class="model-cell"><div class="model-icon icon-google">G</div> Gemini 2.5 Pro</div></td>
+        <td><span class="score-error"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg> ERROR</span></td>
+        <td class="col-new cost-cell expensive" id="c6">$4.87</td>
+        <td class="col-new time-cell" id="t6">22m 15s</td>
+        <td><button class="more-btn">⋯</button></td>
+      </tr>
+      <tr>
+        <td><div class="model-cell"><div class="model-icon icon-anthropic">A</div> Claude Opus 4.6</div></td>
+        <td><span class="score-good">92.40</span></td>
+        <td class="col-new cost-cell expensive" id="c7">$8.62</td>
+        <td class="col-new time-cell" id="t7">46m 20s</td>
+        <td><button class="more-btn">⋯</button></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="add-models-row">
+    <button class="add-models-btn" onclick="openPanel()"><svg width="14" height="14" viewBox="0 0 24 24" fill="#5f6368"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> Add Models</button>
+    <div class="pagination">1–7 of 7 <button>‹</button> <button>›</button></div>
+  </div>
+
+  <div class="quota-row">Daily AI Quota: $0.00 used / $100.00 <span class="quota-reset" id="qr1"></span></div>
+  <div class="quota-row"><span class="quota-warn">⚠</span> Monthly AI Quota: $499.80 used / $500.00 <span class="quota-reset" id="qr2"></span></div>
+  <div class="dataset-version" id="dsVersion"></div>
+</div>
+
+<!-- RIGHT INFO -->
+<div class="right-info">
+  <div class="ri-label">License</div>
+  <div class="ri-value">Apache 2.0</div>
+  <div class="ri-label">Version</div>
+  <div class="ri-value">v2</div>
+  <div class="ri-label">Updated</div>
+  <div class="ri-value">5 days ago</div>
+</div>
+
+<!-- OVERLAY -->
+<div class="overlay" id="overlay" onclick="closePanel()"></div>
+
+<!-- MODEL SELECTION PANEL -->
+<div class="model-panel" id="modelPanel">
+  <div class="mp-header">
+    <span class="mp-title">Evaluate More Models</span>
+    <button class="mp-close" onclick="closePanel()">✕</button>
+  </div>
+  <input class="mp-search" placeholder="Search models" />
+  <div class="mp-jump">
+    <button class="mp-jump-btn" style="background: #d97706; color: #fff;">A</button>
+    <button class="mp-jump-btn" style="background: #6366f1; color: #fff;">D</button>
+    <button class="mp-jump-btn" style="background: #4285f4; color: #fff;">G</button>
+    <button class="mp-jump-btn" style="background: #7c3aed; color: #fff;">Q</button>
+    <button class="mp-jump-btn">Z</button>
+  </div>
+
+  <!-- CONCURRENT WARNING (After only) -->
+  <div class="concurrent-warn" id="concurrentWarn">
+    <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+    <span><b>Multiple Anthropic models selected.</b> Running them together may cause slower performance or errors. Consider running them one at a time. <span class="new-tag show">NEW</span></span>
+  </div>
+
+  <!-- Anthropic -->
+  <div class="mp-provider">
+    <span class="mp-provider-name"><span style="color: #d97706;">●</span> Anthropic Claude <span class="mp-provider-tag">PROPRIETARY</span></span>
+    <span class="mp-select-all">Select all</span>
+  </div>
+  <div class="mp-model-grid">
+    <div class="mp-model"><div><div class="mp-model-name">Claude Sonnet 4.6</div><div class="mp-model-date">Aug 2025</div></div><div class="mp-model-check checked"></div></div>
+    <div class="mp-model"><div><div class="mp-model-name">Claude Opus 4.6</div><div class="mp-model-date">Aug 2025</div></div><div class="mp-model-check checked"></div></div>
+    <div class="mp-model"><div><div class="mp-model-name">Claude Haiku 4.5</div><div class="mp-model-date">Feb 2025</div></div><div class="mp-model-check"></div></div>
+    <div class="mp-model"><div><div class="mp-model-name">Claude Opus 4.5</div><div class="mp-model-date">Aug 2025</div></div><div class="mp-model-check"></div></div>
+    <div class="mp-model"><div><div class="mp-model-name">Claude Sonnet 4.5</div><div class="mp-model-date">Feb 2025</div></div><div class="mp-model-check"></div></div>
+    <div class="mp-model"><div><div class="mp-model-name">Claude Opus 4.1</div><div class="mp-model-date">Mar 2025</div></div><div class="mp-model-check"></div></div>
+  </div>
+
+  <!-- DeepSeek -->
+  <div class="mp-provider">
+    <span class="mp-provider-name"><span style="color: #6366f1;">●</span> DeepSeek <span class="mp-provider-tag">PROPRIETARY</span></span>
+    <span class="mp-select-all">Select all</span>
+  </div>
+  <div class="mp-model-grid">
+    <div class="mp-model"><div><div class="mp-model-name">DeepSeek V3.2</div><div class="mp-model-date">Jul 2025</div></div><div class="mp-model-check"></div></div>
+    <div class="mp-model"><div><div class="mp-model-name">DeepSeek V3.1</div><div class="mp-model-date">Jul 2025</div></div><div class="mp-model-check"></div></div>
+    <div class="mp-model"><div><div class="mp-model-name">DeepSeek-R1</div><div class="mp-model-date">Jan 2025</div></div><div class="mp-model-check"></div></div>
+  </div>
+
+  <!-- Google Gemini -->
+  <div class="mp-provider">
+    <span class="mp-provider-name"><span style="color: #4285f4;">●</span> Google Gemini <span class="mp-provider-tag">PROPRIETARY</span></span>
+    <span class="mp-select-all">Select all ✓</span>
+  </div>
+  <div class="mp-model-grid">
+    <div class="mp-model"><div><div class="mp-model-name">Gemini 3 Flash Preview</div><div class="mp-model-date">Jan 2025</div></div><div class="mp-model-check checked"></div></div>
+    <div class="mp-model"><div><div class="mp-model-name">Gemini 3 Pro Preview</div><div class="mp-model-date">Jan 2025</div></div><div class="mp-model-check"></div></div>
+    <div class="mp-model"><div><div class="mp-model-name">Gemini 2.5 Flash</div><div class="mp-model-date">Jan 2025</div></div><div class="mp-model-check checked"></div></div>
+    <div class="mp-model"><div><div class="mp-model-name">Gemini 2.5 Pro</div><div class="mp-model-date">Jan 2025</div></div><div class="mp-model-check checked"></div></div>
+  </div>
+
+  <!-- Qwen -->
+  <div class="mp-provider">
+    <span class="mp-provider-name"><span style="color: #7c3aed;">●</span> QwenLM Qwen <span class="mp-provider-tag">OPEN</span></span>
+    <span class="mp-select-all">Select all</span>
+  </div>
+  <div class="mp-model-grid">
+    <div class="mp-model"><div><div class="mp-model-name">Qwen 3 Next 80B Thinking</div><div class="mp-model-date">Jan 2025</div></div><div class="mp-model-check"></div></div>
+    <div class="mp-model"><div><div class="mp-model-name">Qwen 3 Next 80B Instruct</div><div class="mp-model-date">Jan 2025</div></div><div class="mp-model-check"></div></div>
+    <div class="mp-model"><div><div class="mp-model-name">Qwen 3 Coder 480B</div><div class="mp-model-date">Jan 2025</div></div><div class="mp-model-check"></div></div>
+    <div class="mp-model"><div><div class="mp-model-name">Qwen 3 235B A22B</div><div class="mp-model-date">Jan 2025</div></div><div class="mp-model-check"></div></div>
+  </div>
+
+  <!-- Footer -->
+  <div class="mp-footer">
+    <div>
+      <div class="mp-selected">5 models selected — Action is permanent & affects quota.</div>
+      <div class="quota-row" style="margin-top: 4px;">Daily AI Quota: $0.00 used / $100.00</div>
+    </div>
+    <div class="mp-footer-btns">
+      <button class="mp-cancel" onclick="closePanel()">Cancel</button>
+      <button class="mp-evaluate">Evaluate</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let isAfter = false;
+
+function toggleMode() {
+  isAfter = !isAfter;
+  document.getElementById('slider').className = isAfter ? 'toggle-slider after' : 'toggle-slider before';
+  document.getElementById('optB').className = isAfter ? 'toggle-option' : 'toggle-option active';
+  document.getElementById('optA').className = isAfter ? 'toggle-option active' : 'toggle-option';
+  document.getElementById('modeHint').className = isAfter ? 'mode-hint visible' : 'mode-hint';
+
+  // Cost and Time columns
+  const cls = isAfter ? 'col-new show' : 'col-new';
+  const thCls = isAfter ? 'th-new show' : 'th-new';
+  const tagCls = isAfter ? 'new-tag show' : 'new-tag';
+  document.getElementById('thCost').className = thCls;
+  document.getElementById('thTime').className = thCls;
+  document.getElementById('costTag').className = tagCls;
+  document.getElementById('timeTag').className = tagCls;
+  for (let i = 1; i <= 7; i++) {
+    document.getElementById('c' + i).className = isAfter ? (document.getElementById('c' + i).getAttribute('data-exp') ? 'col-new show cost-cell expensive' : 'col-new show cost-cell') : 'col-new cost-cell';
+    document.getElementById('t' + i).className = isAfter ? 'col-new show time-cell' : 'col-new time-cell';
+  }
+  // Fix expensive ones
+  if (isAfter) {
+    document.getElementById('c6').className = 'col-new show cost-cell expensive';
+    document.getElementById('c7').className = 'col-new show cost-cell expensive';
+    document.getElementById('c4').style.color = '#1a73e8';
+    document.getElementById('t4').style.color = '#1a73e8';
+  }
+
+  // Concurrent warning
+  document.getElementById('concurrentWarn').className = isAfter ? 'concurrent-warn visible' : 'concurrent-warn';
+
+  // Quota reset times
+  const qr1 = document.getElementById('qr1');
+  const qr2 = document.getElementById('qr2');
+  const dsv = document.getElementById('dsVersion');
+  if (isAfter) {
+    qr1.className = 'quota-reset show';
+    qr1.innerHTML = '— Resets at <b>08:00 UTC</b> <span class="new-tag show">NEW</span>';
+    qr2.className = 'quota-reset show';
+    qr2.innerHTML = '— Resets on <b>April 1, 2026</b> <span class="new-tag show">NEW</span>';
+    dsv.className = 'dataset-version show';
+    dsv.innerHTML = '📦 Dataset version: <b>v3</b> (uploaded 2 hours ago) — All runners using this version <span class="new-tag show">NEW</span>';
+  } else {
+    qr1.className = 'quota-reset';
+    qr1.innerHTML = '';
+    qr2.className = 'quota-reset';
+    qr2.innerHTML = '';
+    dsv.className = 'dataset-version';
+    dsv.innerHTML = '';
+  }
+}
+
+function openPanel() {
+  document.getElementById('overlay').className = 'overlay show';
+  document.getElementById('modelPanel').className = 'model-panel show';
+}
+function closePanel() {
+  document.getElementById('overlay').className = 'overlay';
+  document.getElementById('modelPanel').className = 'model-panel';
+}
+</script>
+</body>
+</html>

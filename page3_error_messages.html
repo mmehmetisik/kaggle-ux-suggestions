@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kaggle — Compare Model Outputs</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; background: #f5f5f5; color: #202124; font-size: 14px; }
+
+  /* TOP BAR */
+  .topbar { height: 50px; background: #fff; border-bottom: 1px solid #e0e0e0; display: flex; align-items: center; padding: 0 12px; position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+  .hamburger { background: none; border: none; cursor: pointer; padding: 8px; margin-right: 4px; display: flex; }
+  .hamburger svg { width: 20px; height: 20px; fill: #5f6368; }
+  .logo-text { font-size: 20px; font-weight: 700; color: #20beff; letter-spacing: -0.3px; margin-right: 24px; }
+  .back-btn { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #202124; cursor: pointer; text-decoration: none; font-weight: 500; }
+  .back-btn svg { width: 20px; height: 20px; fill: #5f6368; }
+  .toggle-wrap { margin-left: auto; display: flex; align-items: center; gap: 10px; margin-right: 12px; }
+  .toggle-label-text { font-size: 11px; color: #5f6368; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+  .toggle-switch { width: 160px; height: 30px; background: #f1f3f4; border-radius: 15px; border: 1px solid #dadce0; display: flex; align-items: center; position: relative; cursor: pointer; overflow: hidden; }
+  .toggle-option { flex: 1; text-align: center; font-size: 12px; font-weight: 500; color: #5f6368; position: relative; z-index: 2; transition: color 0.3s; user-select: none; }
+  .toggle-option.active { color: #fff; }
+  .toggle-slider { position: absolute; top: 2px; width: 77px; height: 26px; background: #1a73e8; border-radius: 13px; transition: left 0.3s ease; z-index: 1; }
+  .toggle-slider.before { left: 2px; }
+  .toggle-slider.after { left: 81px; }
+  .mode-hint { font-size: 11px; color: #34a853; font-weight: 500; display: none; }
+  .mode-hint.visible { display: inline; }
+
+  /* PAGE TITLE */
+  .page-header { margin-top: 50px; padding: 16px 24px; background: #fff; border-bottom: 1px solid #e0e0e0; }
+  .page-title { font-size: 18px; font-weight: 600; color: #202124; display: flex; align-items: center; gap: 8px; }
+
+  /* MODEL TABS */
+  .model-tabs { display: flex; gap: 0; padding: 0 24px; background: #fff; border-bottom: 1px solid #e0e0e0; overflow-x: auto; }
+  .model-tab { padding: 12px 20px; font-size: 13px; color: #5f6368; cursor: pointer; border-bottom: 3px solid transparent; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 160px; text-align: center; white-space: nowrap; }
+  .model-tab:hover { background: #f8f9fa; }
+  .model-tab.active { border-bottom-color: #202124; }
+  .model-tab .mt-icon { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; }
+  .mt-google { background: #4285f4; }
+  .mt-anthropic { background: #d97706; }
+  .mt-name { font-weight: 500; color: #202124; font-size: 13px; }
+  .mt-provider { font-size: 11px; color: #9aa0a6; }
+  .mt-score-good { font-size: 13px; font-weight: 600; color: #34a853; }
+  .mt-score-error { font-size: 12px; font-weight: 500; color: #ea4335; display: flex; align-items: center; gap: 4px; }
+  .mt-score-error svg { width: 14px; height: 14px; fill: #ea4335; }
+  .mt-score-running { font-size: 12px; color: #1a73e8; display: flex; align-items: center; gap: 4px; }
+  .mt-spinner { width: 12px; height: 12px; border: 2px solid #e0e0e0; border-top-color: #1a73e8; border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .mt-stuck { font-size: 12px; color: #e37400; display: flex; align-items: center; gap: 4px; }
+
+  /* MAIN CONTENT */
+  .main { padding: 24px; max-width: 900px; }
+
+  /* ERROR PANEL */
+  .error-panel { background: #fff; border-radius: 12px; border: 1px solid #e0e0e0; overflow: hidden; margin-bottom: 20px; }
+  .error-header { padding: 16px 20px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f1f3f4; }
+  .error-header .model-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; }
+  .error-header .model-name { font-size: 15px; font-weight: 600; color: #202124; }
+  .error-close { margin-left: auto; background: none; border: none; cursor: pointer; font-size: 18px; color: #9aa0a6; }
+
+  /* BEFORE: vague error */
+  .error-before { padding: 16px 20px; }
+  .error-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: #fce8e6; border-radius: 6px; font-size: 13px; color: #c5221f; font-weight: 500; margin-bottom: 12px; }
+  .error-badge svg { width: 16px; height: 16px; fill: #ea4335; }
+  .error-desc { font-size: 13px; color: #5f6368; margin-bottom: 12px; line-height: 1.5; }
+  .error-actions { display: flex; gap: 8px; margin-bottom: 16px; }
+  .btn-sm { padding: 6px 14px; border-radius: 4px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid #dadce0; background: #fff; color: #3c4043; display: flex; align-items: center; gap: 4px; }
+  .btn-sm:hover { background: #f8f9fa; }
+  .error-trace { background: #fce8e6; border-radius: 8px; padding: 16px; font-family: 'Menlo', 'Consolas', monospace; font-size: 12px; color: #c5221f; line-height: 1.6; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+
+  /* AFTER: clear error */
+  .error-after { display: none; padding: 16px 20px; }
+  .error-after.visible { display: block; }
+
+  .clear-error-box { padding: 14px 16px; border-radius: 8px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 10px; }
+  .clear-error-box svg { width: 20px; height: 20px; flex-shrink: 0; margin-top: 1px; }
+  .clear-error-box .ce-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .clear-error-box .ce-desc { font-size: 12px; line-height: 1.5; }
+
+  .ce-safety { background: #fef7e0; border: 1px solid #fdd835; }
+  .ce-safety svg { fill: #f9ab00; }
+  .ce-safety .ce-title { color: #e37400; }
+  .ce-safety .ce-desc { color: #5f6368; }
+
+  .ce-rate { background: #e8f0fe; border: 1px solid #aecbfa; }
+  .ce-rate svg { fill: #1a73e8; }
+  .ce-rate .ce-title { color: #1a73e8; }
+  .ce-rate .ce-desc { color: #5f6368; }
+
+  .ce-quota { background: #fce8e6; border: 1px solid #f5c6cb; }
+  .ce-quota svg { fill: #ea4335; }
+  .ce-quota .ce-title { color: #c5221f; }
+  .ce-quota .ce-desc { color: #5f6368; }
+
+  .ce-image { background: #fff3e0; border: 1px solid #ffcc80; }
+  .ce-image svg { fill: #e65100; }
+  .ce-image .ce-title { color: #e65100; }
+  .ce-image .ce-desc { color: #5f6368; }
+
+  .ce-taskname { background: #f3e8fd; border: 1px solid #ce93d8; }
+  .ce-taskname svg { fill: #7b1fa2; }
+  .ce-taskname .ce-title { color: #7b1fa2; }
+  .ce-taskname .ce-desc { color: #5f6368; }
+
+  .new-tag { font-size: 9px; background: #1a73e8; color: #fff; padding: 1px 5px; border-radius: 3px; font-weight: 700; margin-left: 6px; display: none; }
+  .new-tag.show { display: inline; }
+
+  /* RESUME & FORCE CANCEL */
+  .action-cards { display: none; gap: 12px; margin-top: 16px; }
+  .action-cards.visible { display: flex; }
+  .action-card { flex: 1; padding: 14px 16px; border-radius: 8px; border: 1px solid #e0e0e0; background: #fff; }
+  .action-card-title { font-size: 13px; font-weight: 600; color: #202124; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+  .action-card-desc { font-size: 12px; color: #5f6368; margin-bottom: 10px; line-height: 1.4; }
+  .btn-action { padding: 7px 16px; border-radius: 4px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; display: flex; align-items: center; gap: 4px; }
+  .btn-resume { background: #1a73e8; color: #fff; }
+  .btn-resume:hover { background: #1557b0; }
+  .btn-force { background: #fff; border: 1px solid #ea4335; color: #ea4335; }
+  .btn-force:hover { background: #fce8e6; }
+
+  /* SHOW/HIDE TRACE TOGGLE */
+  .trace-toggle { font-size: 12px; color: #1a73e8; cursor: pointer; margin-bottom: 12px; display: flex; align-items: center; gap: 4px; }
+  .trace-toggle svg { width: 14px; height: 14px; fill: #1a73e8; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <button class="hamburger"><svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg></button>
+  <span class="logo-text">kaggle</span>
+  <a class="back-btn"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg> Compare model outputs</a>
+  <div class="toggle-wrap">
+    <span class="toggle-label-text">View:</span>
+    <div class="toggle-switch" onclick="toggleMode()">
+      <div class="toggle-slider before" id="slider"></div>
+      <div class="toggle-option active" id="optB">Before</div>
+      <div class="toggle-option" id="optA">After</div>
+    </div>
+    <span class="mode-hint" id="modeHint">✨ Suggestions active</span>
+  </div>
+</div>
+
+<!-- MODEL TABS -->
+<div class="model-tabs" style="margin-top: 50px;">
+  <div class="model-tab">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="#9aa0a6"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6z"/></svg>
+    <span class="mt-name">WWTP LLM Defense</span>
+    <span class="mt-provider">Mehmet ISIK</span>
+  </div>
+  <div class="model-tab active" style="border-bottom-color: #ea4335;">
+    <span class="mt-icon mt-google">G</span>
+    <span class="mt-name">gemini-3-flash-preview</span>
+    <span class="mt-provider">Google</span>
+    <span class="mt-score-error"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg> ERROR</span>
+  </div>
+  <div class="model-tab" style="border-bottom-color: #ea4335;">
+    <span class="mt-icon mt-google">G</span>
+    <span class="mt-name">gemini-2.5-pro</span>
+    <span class="mt-provider">Google</span>
+    <span class="mt-score-error"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg> ERROR</span>
+  </div>
+  <div class="model-tab">
+    <span class="mt-icon mt-google">G</span>
+    <span class="mt-name">gemini-2.0-flash-lite</span>
+    <span class="mt-provider">Google</span>
+    <span class="mt-score-good">85.10</span>
+  </div>
+  <div class="model-tab">
+    <span class="mt-icon mt-google">G</span>
+    <span class="mt-name">gemini-2.0-flash</span>
+    <span class="mt-provider">Google</span>
+    <span class="mt-score-good">78.20</span>
+  </div>
+  <div class="model-tab">
+    <span class="mt-icon mt-google">G</span>
+    <span class="mt-name">gemini-2.5-flash</span>
+    <span class="mt-provider">Google</span>
+    <span class="mt-score-good">89.80</span>
+  </div>
+  <div class="model-tab">
+    <span class="mt-icon mt-anthropic">A</span>
+    <span class="mt-name">claude-opus-4.5</span>
+    <span class="mt-provider">Anthropic</span>
+    <span class="mt-score-running"><span class="mt-spinner"></span> 27/30...</span>
+  </div>
+  <div class="model-tab">
+    <span class="mt-icon mt-anthropic">A</span>
+    <span class="mt-name">claude-sonnet-4.5</span>
+    <span class="mt-provider">Anthropic</span>
+    <span class="mt-stuck">⏳ Cancelling...</span>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+  <!-- ===== ERROR PANEL: gemini-3-flash-preview ===== -->
+  <div class="error-panel">
+    <div class="error-header">
+      <div class="model-icon mt-google">G</div>
+      <span class="model-name">gemini-3-flash-preview</span>
+      <button class="error-close">✕</button>
+    </div>
+
+    <!-- BEFORE: vague error -->
+    <div class="error-before" id="errorBefore">
+      <div class="error-badge">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+        Error: Model run failed
+      </div>
+      <p class="error-desc">The model was unable to complete the task successfully. To debug, check Notebook Output for the full exception details.</p>
+      <div class="error-actions">
+        <button class="btn-sm">View Notebook Output</button>
+        <button class="btn-sm">Hide full error ▾</button>
+      </div>
+      <div class="error-trace">Traceback (most recent call last):
+  File "/benchmarks/src/kaggle_benchmarks/tasks.py", line 110, in run
+    run.result = self.func(*args, **kwargs)
+  File "/tmp/ipykernel_10/4154479723.py", line 90, in wwtp_defense_v2
+    scores = run_scenario(
+  File "/kaggle/input/datasets/mehmetisik/wwtp-llm-defense/wwtp_defense_engine.py", line 1388, in run_scenario
+    response = prompt_with_retry(llm, status)
+  File "/kaggle/input/datasets/mehmetisik/wwtp-llm-defense/wwtp_defense_engine.py", line 1242, in prompt_with_retry
+    response = llm.prompt(text)
+  File "/benchmarks/src/kaggle_benchmarks/actors/llms.py", line 169, in prompt
+    return self.respond(
+  File "/benchmarks/src/kaggle_benchmarks/actors/llms.py", line 295, in invoke
+    return self._call_api(raw_messages, **kwargs)
+  File "/benchmarks/.venv/lib/python3.11/site-packages/openai/_base_client.py", line 1047, in request
+    raise self._make_status_error_from_response(err.response) from None
+openai.RateLimitError: Error code: 429 - {'message': 'The estimated cost of this operation ($0.197475) exceeds your available quota. Try again later.', 'type': 'invalid_request_error'}</div>
+    </div>
+
+    <!-- AFTER: clear errors -->
+    <div class="error-after" id="errorAfter">
+      <!-- Safety filter -->
+      <div class="clear-error-box ce-safety">
+        <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+        <div>
+          <div class="ce-title">Content filtered due to safety policy <span class="new-tag show">NEW</span></div>
+          <div class="ce-desc">The prompt contains terms that triggered the model's safety filter. Try rephrasing industrial terms. For example, use "Biogas Unit" instead of "Gas Storage Area".</div>
+        </div>
+      </div>
+
+      <!-- Rate limit -->
+      <div class="clear-error-box ce-rate">
+        <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+        <div>
+          <div class="ce-title">Rate limit exceeded for provider: Google <span class="new-tag show">NEW</span></div>
+          <div class="ce-desc">Multiple Google models are running at the same time and sharing API capacity. Try running fewer models from this provider together, or wait and retry.</div>
+        </div>
+      </div>
+
+      <!-- Quota exceeded -->
+      <div class="clear-error-box ce-quota">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+        <div>
+          <div class="ce-title">Quota exceeded — run stopped at 27/30 <span class="new-tag show">NEW</span></div>
+          <div class="ce-desc">The estimated cost of this operation ($0.20) exceeds your available quota. 27 of 30 runs completed before stopping. $4.87 was used.</div>
+        </div>
+      </div>
+
+      <!-- Image format -->
+      <div class="clear-error-box ce-image">
+        <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+        <div>
+          <div class="ce-title">Image format mismatch <span class="new-tag show">NEW</span></div>
+          <div class="ce-desc">File "drone_image.png" has .png extension but contains JPEG data. Anthropic models require exact format match. Convert the file to genuine PNG format.</div>
+        </div>
+      </div>
+
+      <!-- Task name stuck -->
+      <div class="clear-error-box ce-taskname">
+        <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z"/></svg>
+        <div>
+          <div class="ce-title">Task name locked due to previous failure <span class="new-tag show">NEW</span></div>
+          <div class="ce-desc">The task name "s9_wwtp_flood_emergency" had a previous failure and is permanently locked. Please save with a new name to register successfully.</div>
+        </div>
+      </div>
+
+      <div class="trace-toggle" onclick="document.getElementById('traceBox').style.display = document.getElementById('traceBox').style.display === 'none' ? 'block' : 'none'">
+        <svg viewBox="0 0 24 24"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
+        Show full traceback (for developers)
+      </div>
+      <div class="error-trace" id="traceBox" style="display: none; background: #f8f9fa; color: #5f6368;">Traceback (most recent call last):
+  File "/benchmarks/src/kaggle_benchmarks/tasks.py", line 110, in run
+    run.result = self.func(*args, **kwargs)
+  ...
+openai.RateLimitError: Error code: 429 - {'message': 'The estimated cost
+of this operation ($0.197475) exceeds your available quota.'}</div>
+
+      <!-- RESUME & FORCE CANCEL -->
+      <div class="action-cards visible" id="actionCards">
+        <div class="action-card" style="border-left: 3px solid #1a73e8;">
+          <div class="action-card-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#1a73e8"><path d="M8 5v14l11-7z"/></svg>
+            Resume from checkpoint <span class="new-tag show">NEW</span>
+          </div>
+          <div class="action-card-desc">27 of 30 runs completed. Resume from run 28 instead of starting over. This saves quota and time.</div>
+          <button class="btn-action btn-resume">▶ Resume (3 runs remaining)</button>
+        </div>
+        <div class="action-card" style="border-left: 3px solid #ea4335;">
+          <div class="action-card-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#ea4335"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>
+            Force cancel stuck session <span class="new-tag show">NEW</span>
+          </div>
+          <div class="action-card-desc">This session has been in "Cancelling..." state for 18+ hours. Force cancel to free up your concurrent run slots.</div>
+          <button class="btn-action btn-force">✕ Force Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let isAfter = false;
+function toggleMode() {
+  isAfter = !isAfter;
+  document.getElementById('slider').className = isAfter ? 'toggle-slider after' : 'toggle-slider before';
+  document.getElementById('optB').className = isAfter ? 'toggle-option' : 'toggle-option active';
+  document.getElementById('optA').className = isAfter ? 'toggle-option active' : 'toggle-option';
+  document.getElementById('modeHint').className = isAfter ? 'mode-hint visible' : 'mode-hint';
+  document.getElementById('errorBefore').style.display = isAfter ? 'none' : 'block';
+  document.getElementById('errorAfter').className = isAfter ? 'error-after visible' : 'error-after';
+}
+</script>
+</body>
+</html>
